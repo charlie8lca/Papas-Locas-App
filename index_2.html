@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Papas Lab — Pedidos a domicilio</title>
+  <meta name="description" content="Papas a domicilio personalizadas. Elige tu papa, tamaño y toppings. Entrega en 25–35 min.">
+  <meta name="theme-color" content="#E63946">
+
+  <!-- PWA manifest inline -->
+  <link rel="manifest" href="data:application/json,{%22name%22:%22Papas%20Lab%22,%22short_name%22:%22Papas%20Lab%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23ffffff%22,%22theme_color%22:%22%23E63946%22,%22icons%22:[{%22src%22:%22https://fav.farm/🍟%22,%22sizes%22:%22512x512%22,%22type%22:%22image/png%22}]}">
+
+  <!-- Tabler icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --color-background-primary: #ffffff;
+      --color-background-secondary: #f5f5f7;
+      --color-background-tertiary: #ebebeb;
+      --color-background-info: #EFF6FF;
+      --color-background-danger: #FFF5F5;
+      --color-text-primary: #1a1a1a;
+      --color-text-secondary: #6b7280;
+      --color-text-info: #1d4ed8;
+      --color-text-danger: #E63946;
+      --color-border-tertiary: #e5e7eb;
+      --color-border-secondary: #d1d5db;
+      --border-radius-md: 10px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --color-background-primary: #1c1c1e;
+        --color-background-secondary: #2c2c2e;
+        --color-background-tertiary: #111111;
+        --color-background-info: #1e3a5f;
+        --color-background-danger: #3b1212;
+        --color-text-primary: #f2f2f7;
+        --color-text-secondary: #aeaeb2;
+        --color-text-info: #93c5fd;
+        --color-text-danger: #ff6b6b;
+        --color-border-tertiary: #3a3a3c;
+        --color-border-secondary: #48484a;
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--color-background-tertiary);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .app {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--(--color-background-tertiary));
+      max-width: 430px;
+      margin: 0 auto;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    .screen { display: none; flex-direction: column; min-height: 100vh; }
+    .screen.active { display: flex; }
+
+    .top-bar {
+      background: var(--color-background-primary);
+      border-bottom: 0.5px solid var(--color-border-tertiary);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .logo-txt { font-family: 'Fredoka', sans-serif; font-size: 20px; font-weight: 700; color: #E63946; flex: 1; }
+    .screen-title { font-family: 'Fredoka', sans-serif; font-size: 17px; color: var(--color-text-primary); flex: 1; }
+    .back-btn { background: none; border: none; cursor: pointer; color: var(--color-text-secondary); padding: 4px; display: flex; align-items: center; }
+    .cart-btn { position: relative; background: none; border: none; cursor: pointer; padding: 6px; color: var(--color-text-primary); }
+    .cart-badge { position: absolute; top: 0; right: 0; background: #E63946; color: white; font-size: 10px; font-weight: 600; width: 16px; height: 16px; border-radius: 50%; display: none; align-items: center; justify-content: center; }
+
+    .content { flex: 1; overflow-y: auto; padding-bottom: 24px; }
+
+    /* Hero */
+    .hero-strip { background: #FFD700; padding: 22px 16px 18px; position: relative; overflow: hidden; }
+    .hero-strip::before { content: "🍟"; position: absolute; right: 16px; top: 50%; transform: translateY(-50%); font-size: 60px; opacity: 0.25; }
+    .hero-strip h1 { font-family: 'Fredoka', sans-serif; font-size: 24px; color: #1A1A1A; line-height: 1.2; margin-bottom: 6px; }
+    .hero-strip p { font-size: 13px; color: #3a3a3a; margin-bottom: 14px; }
+    .cta-btn { background: #1A1A1A; color: #FFD700; font-family: 'Fredoka', sans-serif; font-size: 14px; font-weight: 600; border: none; border-radius: 10px; padding: 10px 22px; cursor: pointer; transition: transform 0.15s; display: inline-block; }
+    .cta-btn:active { transform: scale(0.97); }
+
+    /* Oferta */
+    .oferta-banner { margin: 12px 16px 0; background: #E63946; border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+    .oferta-txt h3 { font-family: 'Fredoka', sans-serif; font-size: 15px; color: white; margin-bottom: 2px; }
+    .oferta-txt p { font-size: 12px; color: rgba(255,255,255,0.85); }
+    .oferta-tag { margin-left: auto; background: #FFD700; color: #1A1A1A; font-size: 11px; font-weight: 600; padding: 4px 8px; border-radius: 20px; white-space: nowrap; flex-shrink: 0; }
+
+    .zona-banner { margin: 8px 16px 0; background: var(--color-background-info); border-radius: 10px; padding: 10px 12px; font-size: 12px; color: var(--color-text-info); display: flex; align-items: center; gap: 8px; }
+
+    /* Sección */
+    .section-header { padding: 16px 16px 8px; display: flex; align-items: center; justify-content: space-between; }
+    .section-header h2 { font-family: 'Fredoka', sans-serif; font-size: 17px; color: var(--color-text-primary); }
+    .ver-todo { background: none; border: none; cursor: pointer; font-size: 13px; color: #E63946; font-weight: 500; }
+
+    /* Cards */
+    .menu-scroll { padding: 0 16px 8px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .menu-card { background: var(--color-background-primary); border-radius: 14px; border: 0.5px solid var(--color-border-tertiary); overflow: hidden; cursor: pointer; transition: transform 0.15s; }
+    .menu-card:active { transform: scale(0.97); }
+    .menu-card.agotado { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+    .menu-card-img { height: 82px; display: flex; align-items: center; justify-content: center; font-size: 40px; }
+    .bg-y { background: #FFF4CC; } .bg-r { background: #FFE8E8; } .bg-g { background: #E8F8F0; } .bg-p { background: #F0EEFF; }
+    .menu-card-info { padding: 10px 10px 12px; }
+    .menu-card-info h3 { font-family: 'Fredoka', sans-serif; font-size: 14px; color: var(--color-text-primary); margin-bottom: 2px; }
+    .price { font-size: 13px; font-weight: 600; color: #E63946; }
+    .desc { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; line-height: 1.4; }
+    .agotado-tag { display: inline-block; font-size: 10px; background: var(--color-background-tertiary); color: var(--color-text-secondary); padding: 2px 6px; border-radius: 6px; margin-top: 3px; }
+
+    /* Cómo funciona */
+    .how-section { background: var(--color-background-primary); border-top: 0.5px solid var(--color-border-tertiary); margin-top: 16px; padding: 20px 16px 32px; }
+    .how-section h2 { font-family: 'Fredoka', sans-serif; font-size: 17px; color: var(--color-text-primary); margin-bottom: 18px; }
+    .steps { display: flex; flex-direction: column; }
+    .step { display: flex; gap: 14px; align-items: flex-start; position: relative; }
+    .step:not(:last-child)::after { content: ''; position: absolute; left: 19px; top: 42px; width: 1px; height: calc(100% - 10px); background: var(--color-border-tertiary); }
+    .step-num { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+    .s1 { background: #FFF4CC; } .s2 { background: #FFE8E8; } .s3 { background: #F0EEFF; } .s4 { background: #E8F8F0; } .s5 { background: #FFF4CC; }
+    .step-body { padding: 2px 0 22px; }
+    .step-body h4 { font-family: 'Fredoka', sans-serif; font-size: 15px; color: var(--color-text-primary); margin-bottom: 3px; }
+    .step-body p { font-size: 13px; color: var(--color-text-secondary); line-height: 1.5; }
+
+    /* Personalizar */
+    .pizza-header { background: var(--color-background-primary); padding: 14px 16px; border-bottom: 0.5px solid var(--color-border-tertiary); display: flex; align-items: center; gap: 12px; }
+    .build-section { background: var(--color-background-primary); margin: 10px 0 0; border-top: 0.5px solid var(--color-border-tertiary); border-bottom: 0.5px solid var(--color-border-tertiary); padding: 14px 16px; }
+    .build-section h3 { font-family: 'Fredoka', sans-serif; font-size: 15px; color: var(--color-text-primary); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .size-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .size-btn { background: var(--color-background-secondary); border: 1.5px solid var(--color-border-tertiary); border-radius: 10px; padding: 10px 6px; cursor: pointer; text-align: center; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
+    .size-btn.selected { border-color: #E63946; background: #FFF0F0; }
+    .size-label { font-size: 13px; font-weight: 500; color: var(--color-text-primary); display: block; }
+    .size-extra { font-size: 11px; color: var(--color-text-secondary); display: block; margin-top: 2px; }
+    .topping-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .topping-btn { background: var(--color-background-secondary); border: 1.5px solid var(--color-border-tertiary); border-radius: 10px; padding: 8px 10px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
+    .topping-btn.selected { border-color: #FFD700; background: #FFFAE0; }
+    .top-name { font-size: 13px; color: var(--color-text-primary); }
+    .top-price { font-size: 11px; color: var(--color-text-secondary); }
+
+    /* Bottom bar */
+    .bottom-bar { background: var(--color-background-primary); border-top: 0.5px solid var(--color-border-tertiary); padding: 12px 16px; display: flex; align-items: center; gap: 10px; position: sticky; bottom: 0; z-index: 10; }
+    .total-display { flex: 1; }
+    .total-label { font-size: 11px; color: var(--color-text-secondary); }
+    .total-amount { font-family: 'Fredoka', sans-serif; font-size: 20px; color: var(--color-text-primary); }
+    .action-btn { background: #E63946; color: white; font-family: 'Fredoka', sans-serif; font-size: 15px; font-weight: 600; border: none; border-radius: 12px; padding: 12px 22px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background 0.15s; }
+    .action-btn:active { background: #c42d39; }
+
+    /* Formulario */
+    .form-section { background: var(--color-background-primary); margin: 10px 0 0; border-top: 0.5px solid var(--color-border-tertiary); border-bottom: 0.5px solid var(--color-border-tertiary); padding: 14px 16px; }
+    .form-section h3 { font-family: 'Fredoka', sans-serif; font-size: 15px; color: var(--color-text-primary); margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .field-group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+    .field-group label { font-size: 12px; color: var(--color-text-secondary); font-weight: 500; }
+    .field-group input, .field-group select {
+      font-family: 'DM Sans', sans-serif; font-size: 14px;
+      border: 0.5px solid var(--color-border-secondary);
+      border-radius: var(--border-radius-md);
+      padding: 10px 12px;
+      background: var(--color-background-secondary);
+      color: var(--color-text-primary);
+      width: 100%; outline: none;
+      -webkit-appearance: none; appearance: none;
+    }
+    .field-group input:focus, .field-group select:focus { border-color: #E63946; }
+    .field-group input.error, .field-group select.error { border-color: #E63946; background: var(--color-background-danger); }
+    .err { font-size: 11px; color: var(--color-text-danger); display: none; margin-top: -2px; }
+    .err.show { display: block; }
+    .pago-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+    .pago-btn { background: var(--color-background-secondary); border: 1.5px solid var(--color-border-tertiary); border-radius: 10px; padding: 10px 6px; cursor: pointer; text-align: center; font-family: 'DM Sans', sans-serif; font-size: 12px; color: var(--color-text-primary); display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.15s; }
+    .pago-btn.selected { border-color: #2A9D8F; background: #E8F8F5; }
+    .pago-btn i { font-size: 20px; color: #2A9D8F; }
+
+    /* Resumen */
+    .resumen-line { display: flex; justify-content: space-between; font-size: 13px; color: var(--color-text-secondary); padding: 4px 0; }
+    .resumen-line.bold { font-weight: 600; font-size: 15px; color: var(--color-text-primary); border-top: 0.5px solid var(--color-border-tertiary); padding-top: 8px; margin-top: 4px; }
+    .desc-badge { font-size: 11px; background: #E8F8F5; color: #085041; padding: 2px 7px; border-radius: 20px; font-weight: 500; }
+
+    /* Confirmación */
+    .confirm-screen { display: flex; flex-direction: column; align-items: center; padding: 36px 24px; text-align: center; gap: 12px; }
+    .confirm-circle { width: 76px; height: 76px; border-radius: 50%; background: #E8F8F0; display: flex; align-items: center; justify-content: center; font-size: 34px; margin-bottom: 4px; }
+    .confirm-num { font-family: 'Fredoka', sans-serif; font-size: 26px; color: #E63946; }
+    .confirm-screen h2 { font-family: 'Fredoka', sans-serif; font-size: 20px; color: var(--color-text-primary); }
+    .confirm-screen p { font-size: 13px; color: var(--color-text-secondary); line-height: 1.5; max-width: 280px; }
+    .status-row { display: flex; align-items: center; gap: 10px; background: var(--color-background-secondary); border-radius: 12px; padding: 12px 16px; width: 100%; }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; background: #FFD700; flex-shrink: 0; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+    .status-row p { font-size: 13px; color: var(--color-text-primary); font-weight: 500; max-width: none; }
+    .tiempo-badge { font-family: 'Fredoka', sans-serif; font-size: 22px; color: #2A9D8F; font-weight: 700; }
+    .wsp-btn { background: #25D366; color: white; font-family: 'Fredoka', sans-serif; font-size: 14px; font-weight: 600; border: none; border-radius: 12px; padding: 13px 24px; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .nuevo-btn { background: none; border: 1.5px solid var(--color-border-secondary); color: var(--color-text-secondary); font-family: 'Fredoka', sans-serif; font-size: 14px; border-radius: 12px; padding: 10px 24px; cursor: pointer; width: 100%; margin-top: 4px; }
+  </style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- INICIO -->
+  <div class="screen active" id="s-inicio">
+    <div class="top-bar">
+      <span class="logo-txt">🍟 Papas Lab</span>
+      <button class="cart-btn" onclick="goTo('s-checkout')" aria-label="Ver carrito">
+        <i class="ti ti-shopping-cart" style="font-size:22px;"></i>
+        <span class="cart-badge" id="cb1"></span>
+      </button>
+    </div>
+    <div class="content">
+      <div class="hero-strip">
+        <h1>Tu laboratorio de antojos</h1>
+        <p>Papas a domicilio — personalizadas y calientes</p>
+        <button class="cta-btn" onclick="goTo('s-menu')">Ver menú completo</button>
+      </div>
+      <div class="oferta-banner" id="oferta-banner" onclick="aplicarOferta()">
+        <span style="font-size:26px;flex-shrink:0;">⚡</span>
+        <div class="oferta-txt">
+          <h3 id="oferta-titulo">Oferta del día</h3>
+          <p id="oferta-desc">Cargando...</p>
+        </div>
+        <span class="oferta-tag" id="oferta-tag">HOY</span>
+      </div>
+      <div class="zona-banner">
+        <i class="ti ti-map-pin" style="font-size:16px;flex-shrink:0;"></i>
+        <span>Entregamos en: Centro, Cumbres, Juriquilla, El Pueblito, Constituyentes</span>
+      </div>
+      <div class="section-header">
+        <h2>Destacados</h2>
+        <button class="ver-todo" onclick="goTo('s-menu')">Ver todo</button>
+      </div>
+      <div class="menu-scroll">
+        <div class="menu-card" onclick="seleccionarPapa('Papas Clásicas',50,'🍟','bg-y','La favorita de todos. Crujientes y perfectas.')">
+          <div class="menu-card-img bg-y">🍟</div>
+          <div class="menu-card-info"><h3>Papas Clásicas</h3><p class="desc">Crujientes y perfectas</p><p class="price">desde $50</p></div>
+        </div>
+        <div class="menu-card" onclick="seleccionarPapa('Papas Especiales',70,'🔥','bg-r','Con nuestro mix secreto.')">
+          <div class="menu-card-img bg-r">🔥</div>
+          <div class="menu-card-info"><h3>Papas Especiales</h3><p class="desc">Con nuestro mix secreto</p><p class="price">desde $70</p></div>
+        </div>
+        <div class="menu-card" onclick="seleccionarPapa('Papas Loaded',85,'🧀','bg-p','Al máximo de toppings.')">
+          <div class="menu-card-img bg-p">🧀</div>
+          <div class="menu-card-info"><h3>Papas Loaded</h3><p class="desc">La experiencia completa</p><p class="price">desde $85</p></div>
+        </div>
+        <div class="menu-card agotado">
+          <div class="menu-card-img bg-g">🌿</div>
+          <div class="menu-card-info"><h3>Papas Veganas</h3><p class="desc">100% plant-based</p><span class="agotado-tag">Agotado</span></div>
+        </div>
+      </div>
+
+      <!-- CÓMO FUNCIONA -->
+      <div class="how-section">
+        <h2>¿Cómo funciona?</h2>
+        <div class="steps">
+          <div class="step">
+            <div class="step-num s1">🍟</div>
+            <div class="step-body"><h4>Elige tu papa</h4><p>Explora el menú y selecciona la que más se te antoje — clásica, especial, loaded o BBQ.</p></div>
+          </div>
+          <div class="step">
+            <div class="step-num s2">🧀</div>
+            <div class="step-body"><h4>Personalízala</h4><p>Escoge el tamaño y agrega los toppings que quieras: queso, tocino, jalapeño, aguacate y más.</p></div>
+          </div>
+          <div class="step">
+            <div class="step-num s3">📍</div>
+            <div class="step-body"><h4>Ingresa tu dirección</h4><p>Dinos dónde entregamos. Revisamos que estés dentro de nuestra zona de cobertura.</p></div>
+          </div>
+          <div class="step">
+            <div class="step-num s4">💬</div>
+            <div class="step-body"><h4>Confirma por WhatsApp</h4><p>Tu pedido se envía directo a nuestro laboratorio vía WhatsApp. Nosotros te confirmamos en minutos.</p></div>
+          </div>
+          <div class="step">
+            <div class="step-num s5">🚀</div>
+            <div class="step-body" style="padding-bottom:0;"><h4>Recibe en 25–35 min</h4><p>Preparamos tu orden al momento y la mandamos caliente directo a tu puerta.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MENÚ -->
+  <div class="screen" id="s-menu">
+    <div class="top-bar">
+      <button class="back-btn" onclick="goTo('s-inicio')"><i class="ti ti-chevron-left" style="font-size:22px;"></i></button>
+      <span class="screen-title">Menú completo</span>
+      <button class="cart-btn" onclick="goTo('s-checkout')">
+        <i class="ti ti-shopping-cart" style="font-size:22px;"></i>
+        <span class="cart-badge" id="cb2"></span>
+      </button>
+    </div>
+    <div class="content" style="padding:12px 16px 80px;">
+      <div class="menu-scroll" style="padding:0;">
+        <div class="menu-card" onclick="seleccionarPapa('Papas Clásicas',50,'🍟','bg-y','La favorita de todos.')">
+          <div class="menu-card-img bg-y">🍟</div>
+          <div class="menu-card-info"><h3>Papas Clásicas</h3><p class="price">desde $50</p></div>
+        </div>
+        <div class="menu-card" onclick="seleccionarPapa('Papas Especiales',70,'🔥','bg-r','Con nuestro mix secreto.')">
+          <div class="menu-card-img bg-r">🔥</div>
+          <div class="menu-card-info"><h3>Papas Especiales</h3><p class="price">desde $70</p></div>
+        </div>
+        <div class="menu-card" onclick="seleccionarPapa('Papas Loaded',85,'🧀','bg-p','La experiencia completa.')">
+          <div class="menu-card-img bg-p">🧀</div>
+          <div class="menu-card-info"><h3>Papas Loaded</h3><p class="price">desde $85</p></div>
+        </div>
+        <div class="menu-card" onclick="seleccionarPapa('Papas BBQ',75,'🫙','bg-y','Salsa BBQ de la casa.')">
+          <div class="menu-card-img bg-y">🫙</div>
+          <div class="menu-card-info"><h3>Papas BBQ</h3><p class="price">desde $75</p></div>
+        </div>
+        <div class="menu-card agotado">
+          <div class="menu-card-img bg-g">🌿</div>
+          <div class="menu-card-info"><h3>Papas Veganas</h3><span class="agotado-tag">Agotado</span></div>
+        </div>
+        <div class="menu-card" onclick="seleccionarPapa('Bebida',25,'🧃','bg-g','Refresco, agua o energética.')">
+          <div class="menu-card-img bg-g">🧃</div>
+          <div class="menu-card-info"><h3>Bebida</h3><p class="price">$25</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PERSONALIZAR -->
+  <div class="screen" id="s-personalizar">
+    <div class="top-bar">
+      <button class="back-btn" onclick="goTo('s-menu')"><i class="ti ti-chevron-left" style="font-size:22px;"></i></button>
+      <span class="screen-title">Personaliza tu papa</span>
+    </div>
+    <div class="content">
+      <div class="pizza-header">
+        <span id="p-emoji" style="font-size:36px;">🍟</span>
+        <div>
+          <div style="font-family:'Fredoka',sans-serif;font-size:16px;color:var(--color-text-primary);" id="p-nombre">Papas Clásicas</div>
+          <div style="font-size:13px;color:var(--color-text-secondary);" id="p-desc">La favorita de todos</div>
+        </div>
+      </div>
+      <div class="build-section">
+        <h3><i class="ti ti-ruler"></i> Tamaño</h3>
+        <div class="size-grid">
+          <button class="size-btn" onclick="setTamano('chica',0,this)"><span style="font-size:20px;">🥔</span><span class="size-label">Chica</span><span class="size-extra">incluida</span></button>
+          <button class="size-btn selected" onclick="setTamano('mediana',15,this)"><span style="font-size:26px;">🍟</span><span class="size-label">Mediana</span><span class="size-extra">+$15</span></button>
+          <button class="size-btn" onclick="setTamano('grande',30,this)"><span style="font-size:32px;">🍟</span><span class="size-label">Grande</span><span class="size-extra">+$30</span></button>
+        </div>
+      </div>
+      <div class="build-section">
+        <h3><i class="ti ti-plus"></i> Toppings extras</h3>
+        <div class="topping-grid">
+          <button class="topping-btn" onclick="toggleTopping('Queso',15,this)"><span class="top-name">🧀 Queso</span><span class="top-price">+$15</span></button>
+          <button class="topping-btn" onclick="toggleTopping('Tocino',20,this)"><span class="top-name">🥓 Tocino</span><span class="top-price">+$20</span></button>
+          <button class="topping-btn" onclick="toggleTopping('Jalapeño',10,this)"><span class="top-name">🌶️ Jalapeño</span><span class="top-price">+$10</span></button>
+          <button class="topping-btn" onclick="toggleTopping('Crema',10,this)"><span class="top-name">🫙 Crema</span><span class="top-price">+$10</span></button>
+          <button class="topping-btn" onclick="toggleTopping('Salsa BBQ',12,this)"><span class="top-name">🫙 Salsa BBQ</span><span class="top-price">+$12</span></button>
+          <button class="topping-btn" onclick="toggleTopping('Aguacate',20,this)"><span class="top-name">🥑 Aguacate</span><span class="top-price">+$20</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-bar">
+      <div class="total-display">
+        <div class="total-label">Subtotal</div>
+        <div class="total-amount" id="subtotal-p">$0</div>
+      </div>
+      <button class="action-btn" onclick="agregarAlCarrito()">
+        <i class="ti ti-shopping-cart" style="font-size:18px;"></i> Agregar
+      </button>
+    </div>
+  </div>
+
+  <!-- CHECKOUT -->
+  <div class="screen" id="s-checkout">
+    <div class="top-bar">
+      <button class="back-btn" onclick="goTo('s-inicio')"><i class="ti ti-chevron-left" style="font-size:22px;"></i></button>
+      <span class="screen-title">Tu pedido</span>
+    </div>
+    <div class="content">
+      <div id="carrito-vacio-msg" style="display:none;padding:40px 24px;text-align:center;color:var(--color-text-secondary);font-size:14px;">
+        <i class="ti ti-shopping-cart" style="font-size:44px;opacity:0.3;"></i>
+        <p style="margin-top:8px;">Tu carrito está vacío</p>
+        <button class="cta-btn" style="margin-top:14px;" onclick="goTo('s-menu')">Ir al menú</button>
+      </div>
+      <div id="checkout-form">
+        <div class="form-section">
+          <h3><i class="ti ti-clipboard"></i> Resumen</h3>
+          <div id="resumen-items"><p style="font-size:13px;color:var(--color-text-secondary);">Sin productos aún</p></div>
+          <div id="resumen-desc" style="display:none;" class="resumen-line">
+            <span>Descuento oferta del día <span class="desc-badge" id="oferta-pct-label">20%</span></span>
+            <span style="color:#085041;" id="desc-valor">-$0</span>
+          </div>
+          <div class="resumen-line bold"><span>Total a pagar</span><span id="total-co">$0</span></div>
+        </div>
+        <div style="padding:10px 16px 0;">
+          <button onclick="goTo('s-menu')" style="background:none;border:1.5px solid var(--color-border-secondary);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--color-text-secondary);cursor:pointer;width:100%;font-family:'DM Sans',sans-serif;">
+            <i class="ti ti-plus"></i> Agregar otro producto
+          </button>
+        </div>
+        <div class="form-section">
+          <h3><i class="ti ti-map-pin"></i> Dirección de entrega</h3>
+          <div class="field-group">
+            <label>Colonia (zona de cobertura) *</label>
+            <select id="f-colonia" onchange="validarZona()">
+              <option value="">Selecciona tu colonia...</option>
+              <option value="Centro">Centro Histórico</option>
+              <option value="Cumbres">Cumbres</option>
+              <option value="Juriquilla">Juriquilla</option>
+              <option value="El Pueblito">El Pueblito</option>
+              <option value="Constituyentes">Constituyentes</option>
+              <option value="fuera">Mi colonia no está en la lista</option>
+            </select>
+            <span class="err" id="e-zona">Lo sentimos, no llegamos a tu zona aún.</span>
+            <span class="err" id="e-colonia">Selecciona tu colonia para continuar.</span>
+          </div>
+          <div class="field-group">
+            <label>Calle y número *</label>
+            <input type="text" id="f-calle" placeholder="Ej: Av. Constituyentes 123">
+            <span class="err" id="e-calle">Ingresa tu dirección para continuar.</span>
+          </div>
+          <div class="field-group">
+            <label>Referencias</label>
+            <input type="text" id="f-ref" placeholder="Ej: Casa azul, entre calles...">
+          </div>
+        </div>
+        <div class="form-section">
+          <h3><i class="ti ti-phone"></i> Contacto</h3>
+          <div class="field-group">
+            <label>Número de teléfono (10 dígitos) *</label>
+            <input type="tel" id="f-tel" inputmode="tel" maxlength="10" placeholder="4421234567" oninput="this.value=this.value.replace(/\D/g,'')">
+            <span class="err" id="e-tel">Ingresa un número de 10 dígitos.</span>
+          </div>
+        </div>
+        <div class="form-section">
+          <h3><i class="ti ti-credit-card"></i> Método de pago</h3>
+          <div class="pago-grid">
+            <button class="pago-btn" onclick="setPago('Efectivo',this)"><i class="ti ti-cash"></i><span>Efectivo</span></button>
+            <button class="pago-btn" onclick="setPago('Tarjeta',this)"><i class="ti ti-credit-card"></i><span>Tarjeta</span></button>
+            <button class="pago-btn" onclick="setPago('Digital',this)"><i class="ti ti-device-mobile"></i><span>Digital</span></button>
+          </div>
+          <span class="err" id="e-pago" style="margin-top:6px;">Selecciona un método de pago.</span>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-bar">
+      <div class="total-display">
+        <div class="total-label">Total</div>
+        <div class="total-amount" id="total-bar">$0</div>
+      </div>
+      <button class="action-btn" onclick="confirmarPedido()">Confirmar pedido</button>
+    </div>
+  </div>
+
+  <!-- CONFIRMACIÓN -->
+  <div class="screen" id="s-confirmacion">
+    <div class="top-bar"><span class="logo-txt">🍟 Papas Lab</span></div>
+    <div class="content">
+      <div class="confirm-screen">
+        <div class="confirm-circle">✅</div>
+        <div class="confirm-num" id="num-orden">#PL-0001</div>
+        <h2>¡Pedido confirmado!</h2>
+        <p>Tu orden está siendo preparada. El negocio te contactará por WhatsApp para confirmar.</p>
+        <div class="status-row">
+          <div class="status-dot"></div>
+          <p>En preparación...</p>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+          <span style="font-size:13px;color:var(--color-text-secondary);">Tiempo estimado de entrega</span>
+          <span class="tiempo-badge">25 – 35 min</span>
+        </div>
+        <div id="confirm-resumen" style="background:var(--color-background-secondary);border-radius:12px;padding:14px 16px;width:100%;font-size:13px;color:var(--color-text-secondary);line-height:2;"></div>
+        <button class="wsp-btn" onclick="enviarWhatsApp()">
+          <i class="ti ti-brand-whatsapp" style="font-size:20px;"></i>
+          Confirmar por WhatsApp
+        </button>
+        <button class="nuevo-btn" onclick="nuevoPedido()">Hacer otro pedido</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // CONFIGURACIÓN — edita aquí tu número
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const WSP_NUM = '521XXXXXXXXXX'; // <-- pon tu número con código de país sin +
+
+  // Oferta del día — cambia esto cada día sin tocar nada más
+  const OFERTA_CONFIG = {
+    titulo: 'Oferta del día',
+    descripcion: 'Papas Especiales con 20% de descuento',
+    producto: 'Papas Especiales',
+    descuento: 0.20,
+    tag: 'HOY'
+  };
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  let state = { papaActual:null, tamano:{nombre:'mediana',extra:15}, toppings:[], carrito:[], ofertaAplicada:false, pago:null };
+
+  function initOferta() {
+    document.getElementById('oferta-titulo').textContent = OFERTA_CONFIG.titulo;
+    document.getElementById('oferta-desc').textContent = OFERTA_CONFIG.descripcion;
+    document.getElementById('oferta-tag').textContent = OFERTA_CONFIG.tag;
+    document.getElementById('oferta-pct-label').textContent = Math.round(OFERTA_CONFIG.descuento*100)+'%';
+  }
+
+  function saveCarrito() { try { localStorage.setItem('pl_carrito', JSON.stringify(state.carrito)); } catch(e){} }
+  function loadCarrito() {
+    try {
+      const s = localStorage.getItem('pl_carrito');
+      if (s) { state.carrito = JSON.parse(s); actualizarBadge(); actualizarResumenCheckout(); }
+    } catch(e){}
+  }
+
+  function goTo(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    try { document.getElementById(id).querySelector('.content').scrollTop = 0; } catch(e){}
+    actualizarBadge();
+    if (id === 's-checkout') {
+      actualizarResumenCheckout();
+      const v = state.carrito.length === 0;
+      document.getElementById('carrito-vacio-msg').style.display = v ? 'block' : 'none';
+      document.getElementById('checkout-form').style.display = v ? 'none' : 'block';
+    }
+  }
+
+  function actualizarBadge() {
+    const n = state.carrito.length;
+    ['cb1','cb2'].forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = n;
+      el.style.display = n > 0 ? 'flex' : 'none';
+    });
+  }
+
+  function seleccionarPapa(nombre, precio, emoji, bg, desc) {
+    state.papaActual = { nombre, precio, emoji, bg, desc };
+    state.tamano = { nombre:'mediana', extra:15 };
+    state.toppings = [];
+    document.getElementById('p-nombre').textContent = nombre;
+    document.getElementById('p-desc').textContent = desc;
+    document.getElementById('p-emoji').textContent = emoji;
+    document.querySelectorAll('.size-btn').forEach((b,i) => b.classList.toggle('selected', i===1));
+    document.querySelectorAll('.topping-btn').forEach(b => b.classList.remove('selected'));
+    actualizarSubtotal();
+    goTo('s-personalizar');
+  }
+
+  function setTamano(nombre, extra, btn) {
+    state.tamano = { nombre, extra };
+    document.querySelectorAll('.size-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    actualizarSubtotal();
+  }
+
+  function toggleTopping(nombre, precio, btn) {
+    const idx = state.toppings.findIndex(t => t.nombre === nombre);
+    if (idx >= 0) { state.toppings.splice(idx,1); btn.classList.remove('selected'); }
+    else { state.toppings.push({nombre,precio}); btn.classList.add('selected'); }
+    actualizarSubtotal();
+  }
+
+  function actualizarSubtotal() {
+    if (!state.papaActual) return;
+    let t = state.papaActual.precio + state.tamano.extra;
+    state.toppings.forEach(x => t += x.precio);
+    document.getElementById('subtotal-p').textContent = '$' + t;
+  }
+
+  function agregarAlCarrito() {
+    if (!state.papaActual) return;
+    let subtotal = state.papaActual.precio + state.tamano.extra;
+    state.toppings.forEach(x => subtotal += x.precio);
+    state.carrito.push({ nombre:state.papaActual.nombre, emoji:state.papaActual.emoji, tamano:state.tamano.nombre, toppings:[...state.toppings], subtotal });
+    saveCarrito(); actualizarBadge(); actualizarResumenCheckout(); goTo('s-checkout');
+  }
+
+  function aplicarOferta() {
+    if (state.ofertaAplicada) { alert('La oferta ya está aplicada.'); return; }
+    state.ofertaAplicada = true;
+    actualizarResumenCheckout();
+    document.getElementById('oferta-tag').textContent = '✓ Aplicada';
+    document.getElementById('oferta-banner').style.opacity = '0.7';
+  }
+
+  function calcularTotal() {
+    let base = 0; state.carrito.forEach(c => base += c.subtotal);
+    let desc = 0;
+    if (state.ofertaAplicada) state.carrito.filter(c => c.nombre === OFERTA_CONFIG.producto).forEach(e => { desc += Math.round(e.subtotal * OFERTA_CONFIG.descuento); });
+    return { base, descuento:desc, total:base-desc };
+  }
+
+  function actualizarResumenCheckout() {
+    const cont = document.getElementById('resumen-items'); if (!cont) return;
+    if (state.carrito.length === 0) {
+      cont.innerHTML = '<p style="font-size:13px;color:var(--color-text-secondary);">Sin productos aún</p>';
+      ['total-co','total-bar'].forEach(id => document.getElementById(id).textContent = '$0');
+      document.getElementById('resumen-desc').style.display = 'none'; return;
+    }
+    let html = '';
+    state.carrito.forEach((item,i) => {
+      const tops = item.toppings.map(t => t.nombre).join(', ') || 'Sin extras';
+      html += `<div class="resumen-line" style="align-items:flex-start;"><span>${item.emoji} ${item.nombre} (${item.tamano})<br><span style="font-size:11px;color:var(--color-text-secondary);">${tops}</span></span><span style="display:flex;align-items:center;gap:6px;">$${item.subtotal}<button onclick="eliminarItem(${i})" style="background:none;border:none;cursor:pointer;color:var(--color-text-secondary);padding:0;" aria-label="Eliminar"><i class="ti ti-x" style="font-size:14px;"></i></button></span></div>`;
+    });
+    cont.innerHTML = html;
+    const { descuento, total } = calcularTotal();
+    if (descuento > 0) { document.getElementById('resumen-desc').style.display = 'flex'; document.getElementById('desc-valor').textContent = '-$'+descuento; }
+    else document.getElementById('resumen-desc').style.display = 'none';
+    ['total-co','total-bar'].forEach(id => document.getElementById(id).textContent = '$'+total);
+  }
+
+  function eliminarItem(i) {
+    state.carrito.splice(i,1); saveCarrito(); actualizarBadge(); actualizarResumenCheckout();
+    const v = state.carrito.length === 0;
+    document.getElementById('carrito-vacio-msg').style.display = v ? 'block' : 'none';
+    document.getElementById('checkout-form').style.display = v ? 'none' : 'block';
+  }
+
+  function validarZona() {
+    const val = document.getElementById('f-colonia').value;
+    document.getElementById('e-colonia').classList.remove('show');
+    if (val === 'fuera') { document.getElementById('e-zona').classList.add('show'); document.getElementById('f-colonia').classList.add('error'); }
+    else { document.getElementById('e-zona').classList.remove('show'); document.getElementById('f-colonia').classList.remove('error'); }
+  }
+
+  function setPago(tipo, btn) {
+    state.pago = tipo;
+    document.querySelectorAll('.pago-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    document.getElementById('e-pago').classList.remove('show');
+  }
+
+  function confirmarPedido() {
+    if (state.carrito.length === 0) { goTo('s-menu'); return; }
+    let ok = true;
+    const col = document.getElementById('f-colonia'), cal = document.getElementById('f-calle'), tel = document.getElementById('f-tel');
+    if (!col.value) { col.classList.add('error'); document.getElementById('e-colonia').classList.add('show'); document.getElementById('e-zona').classList.remove('show'); ok = false; }
+    else if (col.value === 'fuera') { ok = false; }
+    else { col.classList.remove('error'); document.getElementById('e-colonia').classList.remove('show'); }
+    if (!cal.value.trim()) { cal.classList.add('error'); document.getElementById('e-calle').classList.add('show'); ok = false; }
+    else { cal.classList.remove('error'); document.getElementById('e-calle').classList.remove('show'); }
+    if (tel.value.length < 10) { tel.classList.add('error'); document.getElementById('e-tel').classList.add('show'); ok = false; }
+    else { tel.classList.remove('error'); document.getElementById('e-tel').classList.remove('show'); }
+    if (!state.pago) { document.getElementById('e-pago').classList.add('show'); ok = false; }
+    if (!ok) return;
+    const folio = '#PL-' + String(Math.floor(Math.random()*9000)+1000);
+    document.getElementById('num-orden').textContent = folio;
+    const { total, descuento } = calcularTotal();
+    let html = state.carrito.map(c => `${c.emoji} ${c.nombre} (${c.tamano})`).join('<br>');
+    html += `<br>📍 ${cal.value}, ${col.value}<br>💳 ${state.pago}`;
+    if (descuento > 0) html += `<br>🏷️ Descuento: -$${descuento}`;
+    html += `<br><strong style="color:var(--color-text-primary);">Total: $${total}</strong>`;
+    document.getElementById('confirm-resumen').innerHTML = html;
+    try { localStorage.removeItem('pl_carrito'); } catch(e){}
+    goTo('s-confirmacion');
+  }
+
+  function enviarWhatsApp() {
+    const cal = document.getElementById('f-calle').value, col = document.getElementById('f-colonia').value, tel = document.getElementById('f-tel').value;
+    const { total, descuento } = calcularTotal();
+    let msg = '¡Hola! Quiero confirmar mi pedido de Papas Lab:%0A%0A';
+    state.carrito.forEach(c => { const tops = c.toppings.map(t => t.nombre).join(', ') || 'Sin extras'; msg += `🍟 ${c.nombre} (${c.tamano}) — ${tops}%0A`; });
+    msg += `%0A📍 ${cal}, ${col}%0A📞 ${tel}%0A💳 Pago: ${state.pago}%0A`;
+    if (descuento > 0) msg += `🏷️ Descuento: -$${descuento}%0A`;
+    msg += `💰 *Total: $${total}*`;
+    window.open('https://wa.me/' + WSP_NUM + '?text=' + msg, '_blank');
+  }
+
+  function nuevoPedido() {
+    state.carrito = []; state.ofertaAplicada = false; state.pago = null;
+    ['f-calle','f-colonia','f-ref','f-tel'].forEach(id => { const el = document.getElementById(id); if(el){el.value='';el.classList.remove('error');} });
+    ['e-calle','e-colonia','e-zona','e-tel','e-pago'].forEach(id => { const el = document.getElementById(id); if(el) el.classList.remove('show'); });
+    document.querySelectorAll('.pago-btn').forEach(b => b.classList.remove('selected'));
+    document.getElementById('oferta-tag').textContent = 'HOY';
+    document.getElementById('oferta-banner').style.opacity = '1';
+    try { localStorage.removeItem('pl_carrito'); } catch(e){}
+    actualizarBadge(); actualizarResumenCheckout(); goTo('s-inicio');
+  }
+
+  initOferta();
+  loadCarrito();
+</script>
+</body>
+</html>
